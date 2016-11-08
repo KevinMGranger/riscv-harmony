@@ -79,6 +79,27 @@ impl Processor {
         let rs1_val = self.get(rs1);
         self.set(rd, rs1_val ^ imm);
     }
+
+    /// Perform a logical left shift to `rs1`.
+    fn slli(&mut self, rd: Register, rs1: Register, imm: u32) {
+        let rs1_val = self.get(rs1);
+        self.set(rd, rs1_val << imm)
+    }
+
+    /// Perform a logical right shift to `rs1`.
+    /// This means zeroes are shifted into the upper bits.
+    fn srli(&mut self, rd: Register, rs1: Register, imm: u32) {
+        let rs1_val = self.get(rs1);
+        self.set(rd, rs1_val >> imm)
+    }
+
+    /// Perform an arithmetic right shift to `rs1`.
+    /// This means the original sign bit is shifted into the upper bits.
+    fn srai(&mut self, rd: Register, rs1: Register, imm: u32) {
+        let rs1_val = self.get(rs1) as i32;
+        self.set(rd, rs1_val >> imm)
+    }
+
 }
 
 fn sign_extend(imm: u32) -> u32 {
