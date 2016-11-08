@@ -16,7 +16,7 @@ impl Processor {
         Processor { registers: [0; 33] }
     }
 
-    fn get(&mut self, reg: Register) -> u32 {
+    fn get(&self, reg: Register) -> u32 {
         match reg {
             0 => 0,
             _ => self.registers[reg],
@@ -55,9 +55,9 @@ impl Processor {
         let rs1_val: u32 = self.get(rs1);
         if imm == 1 {
             // SEQZ pseudo-op.
-            self.set(rd, if rs1_val == 0 { 1 } else { 0 })
+            self.set(rd, (rs1_val == 0) as u32)
         } else {
-            self.set(rd, if rs1_val < imm { 1 } else { 0 })
+            self.set(rd, (rs1_val < imm) as u32)
         }
     }
 
@@ -98,7 +98,7 @@ impl Processor {
     /// This means the original sign bit is shifted into the upper bits.
     fn srai(&mut self, rd: Register, rs1: Register, imm: u32) {
         let rs1_val = self.get(rs1) as i32;
-        self.set(rd, rs1_val >> imm)
+        self.set(rd, (rs1_val >> imm) as u32)
     }
 
     /// Load the lower 20 bits of the immediate into the register.
@@ -110,10 +110,74 @@ impl Processor {
     /// Build a 32-bit number in the same way as LUI, add the
     /// program counter, and put the result in `rd`.
     fn auipc(&mut self, rd: Register, imm: u32) {
-        let result, _ = (imm << 12).overflowing_add(self.get(pc))
+        let (result, _) = (imm << 12).overflowing_add(self.get(pc));
         self.set(rd, result)
     }
 
+    /// Add two registers together, ignoring overflow.
+    fn add(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let (result, _) = self.get(rs1).overflowing_add(self.get(rs2));
+        self.set(rd, result)
+    }
+
+    /// Subtract rs2 from rs1, ignoring overflow.
+    fn sub(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let (result, _) = self.get(rs1).overflowing_sub(self.get(rs2));
+        self.set(rd, result)
+    }
+
+    /// Set rd to 1 if rs1 < rs2, signedly. Else, set it to 0.
+    fn slt(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let rs1 = self.get(rs1) as i32;
+        let rs2 = self.get(rs2) as i32;
+        self.set(rd, (rs1 < rs2) as u32)
+    }
+
+    /// Set rd to 1 if rs1 < rs2, unsignedly. Else, set it to 0.
+    ///
+    /// `SLTU rd, x0, rs2` == `SNEZ rd, rs`
+    fn sltu(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let result = (self.get(rs1) < self.get(rs2)) as u32;
+        self.set(rd, result)
+    }
+
+    /// Bitwise AND two registers.
+    fn and(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let result = self.get(rs1) & self.get(rs2);
+        self.set(rd, result)
+    }
+
+    /// Bitwise OR two registers.
+    fn or(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let result = self.get(rs1) | self.get(rs2);
+        self.set(rd, result)
+    }
+
+    /// Bitwise XOR two registers.
+    fn xor(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let result = self.get(rs1) ^ self.get(rs2);
+        self.set(rd, result)
+    }
+
+    /// Perform a logical left shift by the amount in the lower 5 bits of rs2.
+    fn sll(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let result = self.get(rs1) << (self.get(rs2) & 0b011111);
+        self.set(rd, result)
+    }
+
+    /// Perform a logical right shift by the amount in the lower 5 bits of rs2.
+    /// This means zeroes are shifted into the upper bits.
+    fn srl(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let result = self.get(rs1) >> (self.get(rs2) & 0b011111);
+        self.set(rd, result)
+    }
+
+    /// Perform an arithmetic right shift by the amount in the lower 5 bits of rs2.
+    /// This means the value of the sign bit is shifted into the upper bits.
+    fn sra(&mut self, rd: Register, rs1: Register, rs2: Register) {
+        let result = ((self.get(rs1) as i32) >> (self.get(rs2) & 0b011111)) as u32;
+        self.set(rd, result)
+    }
 }
 
 fn sign_extend(imm: u32) -> u32 {
