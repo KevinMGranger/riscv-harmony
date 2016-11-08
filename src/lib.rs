@@ -3,6 +3,7 @@
 ///  Volume 1, Version, 2.1, Section 2.4).
 
 type Register = usize;
+const pc: Register = 32;
 
 struct Processor {
     // XXX make registers just 4 bytes that are interpreted as necessary,
@@ -98,6 +99,19 @@ impl Processor {
     fn srai(&mut self, rd: Register, rs1: Register, imm: u32) {
         let rs1_val = self.get(rs1) as i32;
         self.set(rd, rs1_val >> imm)
+    }
+
+    /// Load the lower 20 bits of the immediate into the register.
+    /// The lowest 12 bits are filled with zeroes.
+    fn lui(&mut self, rd: Register, imm: u32) {
+        self.set(rd, imm << 12)
+    }
+
+    /// Build a 32-bit number in the same way as LUI, add the
+    /// program counter, and put the result in `rd`.
+    fn auipc(&mut self, rd: Register, imm: u32) {
+        let result, _ = (imm << 12).overflowing_add(self.get(pc))
+        self.set(rd, result)
     }
 
 }
