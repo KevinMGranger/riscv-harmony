@@ -178,6 +178,84 @@ impl Processor {
         let result = ((self.get(rs1) as i32) >> (self.get(rs2) & 0b011111)) as u32;
         self.set(rd, result)
     }
+
+    /// Perform an unconditional jump to a signed offset of the current PC.
+    /// The current PC + 4 is stored in rd.
+    /// `JAL x0, imm` == `J imm`
+    fn jal(&mut self, rd: Register, imm: u32) {
+        let current_pc = self.get(pc);
+        let following_jump = current_pc + 4;
+        let jump_to = unsigned_signed_add(current_pc, imm as i32);
+        self.set(rd, following_jump);
+        self.set(pc, jump_to)
+    }
+
+    /// Perform an unconditional jump to a signed offset from the register rs1.
+    /// The least-significant byte is always set to zero.
+    /// The current PC + 4 is stored in rd.
+    fn jalr(&mut self, rd: Register, rs1: Register, imm: u32) {
+        let following_jump = self.get(pc) + 4;
+        let jump_to = unsigned_signed_add(self.get(rs1), imm as i32);
+        self.set(rd, following_jump);
+        self.set(pc, jump_to)
+    }
+
+    /// Perform a jump to the signed offset if the two registers are equal.
+    fn beq(&mut self, rs1: Register, rs2: Register, imm: u32) {
+        if self.get(rs1) == self.get(rs2) {
+            let jump_to = unsigned_signed_add(self.get(pc), imm as i32);
+            self.set(pc, jump_to)
+        }
+    }
+
+    /// Perform a jump to the signed offset if the two registers are not equal.
+    fn bne(&mut self, rs1: Register, rs2: Register, imm: u32) {
+        if self.get(rs1) != self.get(rs2) {
+            let jump_to = unsigned_signed_add(self.get(pc), imm as i32);
+            self.set(pc, jump_to)
+        }
+    }
+
+    /// Perform a jump to the signed offset if rs1 < rs2, signedly.
+    fn blt(&mut self, rs1: Register, rs2: Register, imm: u32) {
+        if (self.get(rs1) as i32) < (self.get(rs2) as i32) {
+            let jump_to = unsigned_signed_add(self.get(pc), imm as i32);
+            self.set(pc, jump_to)
+        }
+    }
+
+    /// Perform a jump to the signed offset if rs1 < rs2, unsignedly.
+    fn bltu(&mut self, rs1: Register, rs2: Register, imm: u32) {
+        if self.get(rs1) < self.get(rs2) {
+            let jump_to = unsigned_signed_add(self.get(pc), imm as i32);
+            self.set(pc, jump_to)
+        }
+    }
+
+    /// Perform a jump to the signed offset if rs1 >= rs2, signedly.
+    fn bge(&mut self, rs1: Register, rs2: Register, imm: u32) {
+        if (self.get(rs1) as i32) >= (self.get(rs2) as i32) {
+            let jump_to = unsigned_signed_add(self.get(pc), imm as i32);
+            self.set(pc, jump_to)
+        }
+    }
+
+    /// Perform a jump to the signed offset if rs1 >= rs2, unsignedly.
+    fn bgeu(&mut self, rs1: Register, rs2: Register, imm: u32) {
+        if self.get(rs1) >= self.get(rs2) {
+            let jump_to = unsigned_signed_add(self.get(pc), imm as i32);
+            self.set(pc, jump_to)
+        }
+    }
+}
+
+
+fn unsigned_signed_add(left: u32, right: i32) -> u32 {
+    if right.is_negative() {
+        left.wrapping_sub((-(right as i64)) as u32)
+    } else {
+        left.wrapping_add(right as u32)
+    }
 }
 
 fn sign_extend(imm: u32) -> u32 {
