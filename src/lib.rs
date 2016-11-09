@@ -2,6 +2,8 @@
 /// ([the RISC-V Instruction Set Manual](https://riscv.org/specifications/),
 ///  Volume 1, Version, 2.1, Section 2.4).
 
+pub mod memory;
+
 type Register = usize;
 const pc: Register = 32;
 
